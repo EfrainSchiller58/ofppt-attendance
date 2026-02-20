@@ -1,17 +1,32 @@
-FROM php:8.2-apache
+FROM php:8.2-cli
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
+    libpq-dev \
+    libzip-dev \
     zip \
     unzip \
     curl \
-    git
+    git \
+    sqlite3 \
+    libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql mbstring exif pcntl bcmath gd
+# Install PHP extensions (MySQL + PostgreSQL + SQLite support)
+RUN docker-php-ext-install \
+    pdo \
+    pdo_mysql \
+    pdo_pgsql \
+    pdo_sqlite \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    gd \
+    zip
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -19,23 +34,33 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy project files
+# Copy composer files first for better Docker layer caching
+COPY composer.json composer.lock* ./
+
+# Install Laravel dependencies (no dev)
+RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
+
+# Copy the rest of the project files
 COPY . .
 
-# Install Laravel dependencies
-RUN composer install --no-dev --optimize-autoloader
+# Re-run composer scripts (post-autoload-dump, etc.)
+RUN composer dump-autoload --optimize
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html/storage
+# Create required directories & set permissions
+RUN mkdir -p storage/framework/{sessions,views,cache} \
+    && mkdir -p storage/logs \
+    && mkdir -p storage/app/public \
+    && mkdir -p bootstrap/cache \
+    && mkdir -p database \
+    && chmod -R 775 storage bootstrap/cache database
 
-# Enable Apache rewrite
-RUN a2enmod rewrite
+# Copy startup script
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Set Apache document root to public folder
-ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+# Render uses PORT env variable (default 10000 on free tier)
+ENV PORT=10000
 
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+EXPOSE ${PORT}
 
-EXPOSE 80
+ENTRYPOINT ["docker-entrypoint.sh"]
