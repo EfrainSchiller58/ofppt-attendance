@@ -15,7 +15,13 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        // Disable foreign key checks (works for both MySQL and SQLite)
+        if (DB::getDriverName() === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = OFF');
+        } else {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        }
+
         Notification::truncate();
         DB::table('justifications')->truncate();
         DB::table('absences')->truncate();
@@ -25,7 +31,12 @@ class DatabaseSeeder extends Seeder
         Group::truncate();
         User::truncate();
         DB::table('personal_access_tokens')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        if (DB::getDriverName() === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = ON');
+        } else {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        }
 
         $defaultPassword = 'password123';
 

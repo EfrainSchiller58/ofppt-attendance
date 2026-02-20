@@ -60,6 +60,13 @@ php artisan view:cache || true
 echo "Running database migrations..."
 php artisan migrate --force || true
 
+# Seed database if users table is empty
+USER_COUNT=$(php artisan tinker --execute="echo \App\Models\User::count();" 2>/dev/null | tail -1)
+if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
+    echo "Seeding database..."
+    php artisan db:seed --force || true
+fi
+
 # Link storage
 php artisan storage:link || true
 
