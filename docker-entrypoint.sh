@@ -3,21 +3,9 @@ set -e
 
 cd /var/www/html
 
-# Generate APP_KEY if not set
-if [ -z "$APP_KEY" ]; then
-    if [ -f .env ]; then
-        source .env
-    fi
-    if [ -z "$APP_KEY" ]; then
-        echo "Generating application key..."
-        php artisan key:generate --force
-    fi
-fi
-
-# Create .env from environment variables if it doesn't exist
-if [ ! -f .env ]; then
-    echo "Creating .env from environment variables..."
-    cat > .env <<EOF
+# ALWAYS create .env from environment variables first
+echo "Creating .env from environment variables..."
+cat > .env <<EOF
 APP_NAME="${APP_NAME:-Laravel}"
 APP_ENV="${APP_ENV:-production}"
 APP_KEY="${APP_KEY:-}"
@@ -27,10 +15,10 @@ APP_URL="${APP_URL:-http://localhost}"
 LOG_CHANNEL=stack
 LOG_LEVEL="${LOG_LEVEL:-error}"
 
-DB_CONNECTION="${DB_CONNECTION:-pgsql}"
+DB_CONNECTION="${DB_CONNECTION:-sqlite}"
 DB_HOST="${DB_HOST:-}"
 DB_PORT="${DB_PORT:-5432}"
-DB_DATABASE="${DB_DATABASE:-}"
+DB_DATABASE="${DB_DATABASE:-database/database.sqlite}"
 DB_USERNAME="${DB_USERNAME:-}"
 DB_PASSWORD="${DB_PASSWORD:-}"
 DATABASE_URL="${DATABASE_URL:-}"
@@ -45,6 +33,11 @@ QUEUE_CONNECTION="${QUEUE_CONNECTION:-sync}"
 SANCTUM_STATEFUL_DOMAINS="${SANCTUM_STATEFUL_DOMAINS:-}"
 FRONTEND_URL="${FRONTEND_URL:-}"
 EOF
+
+# Generate APP_KEY if not set
+if [ -z "$APP_KEY" ]; then
+    echo "Generating application key..."
+    php artisan key:generate --force
 fi
 
 # Handle SQLite database creation if using sqlite
