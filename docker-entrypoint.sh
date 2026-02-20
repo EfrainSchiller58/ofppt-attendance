@@ -41,13 +41,33 @@ if [ -z "$APP_KEY" ]; then
 fi
 
 # Handle SQLite database creation if using sqlite
-if [ "$DB_CONNECTION" = "sqlite" ]; then
+DB_CONN="${DB_CONNECTION:-sqlite}"
+if [ "$DB_CONN" = "sqlite" ]; then
     DB_PATH="${DB_DATABASE:-database/database.sqlite}"
+    NEED_SEED=false
     if [ ! -f "$DB_PATH" ]; then
         echo "Creating SQLite database at $DB_PATH..."
         touch "$DB_PATH"
-        chmod 664 "$DB_PATH"
+        chmod 775 "$DB_PATH"
+        NEED_SEED=true
     fi
+fi
+
+# Clear any cached config first
+php artisan config:clear || true
+
+# Run migrations
+echo "Running database migrations..."
+php artisan migrate --force || true
+
+# Seed database if it's a fresh database
+if [ "$NEED_SEED" = "true" ]; then
+    echo "Seeding database..."
+    php artisan db:seed --force || true
+else
+    # Also seed if users table is empty
+    echo "Checking if seed is needed..."
+    php artisan db:seed --force || true
 fi
 
 # Cache configuration for production
@@ -56,18 +76,11 @@ php artisan config:cache || true
 php artisan route:cache || true
 php artisan view:cache || true
 
-# Run migrations
-echo "Running database migrations..."
-php artisan migrate --force || true
-
-# Seed database if users table is empty
-USER_COUNT=$(php artisan tinker --execute="echo \App\Models\User::count();" 2>/dev/null | tail -1)
-if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
-    echo "Seeding database..."
-    php artisan db:seed --force || true
-fi
-
 # Link storage
+php artisan storage:link || true
+
+echo "Starting Laravel server on port ${PORT:-10000}..."
+exec php artisan serve --host=0.0.0.0 --port="${PORT:-10000}"
 php artisan storage:link || true
 
 echo "Starting Laravel server on port ${PORT:-10000}..."
