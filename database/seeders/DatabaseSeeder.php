@@ -58,15 +58,15 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Groups
-        $g1 = Group::create(['name' => 'DEV201', 'level' => '2ème année']);
-        $g2 = Group::create(['name' => 'DEVOFWS', 'level' => '1ère année']);
+        $g1 = Group::create(['name' => 'DEV201', 'code' => 'DEV201', 'level' => '2ème année']);
+        $g2 = Group::create(['name' => 'DEVOFWS', 'code' => 'DEVOFWS', 'level' => '1ère année']);
 
-        // Teachers (4) — fixed emails for easy login
+        // Teachers (4) — fixed emails for easy login, ALL have access to BOTH groups
         $teachers = [
-            ['first_name' => 'Salma', 'last_name' => 'Karim', 'email' => 'salma.karim@ofppt.com', 'subject' => 'Développement Web', 'groups' => [$g1->id]],
+            ['first_name' => 'Salma', 'last_name' => 'Karim', 'email' => 'salma.karim@ofppt.com', 'subject' => 'Développement Web', 'groups' => [$g1->id, $g2->id]],
             ['first_name' => 'Omar', 'last_name' => 'Haddad', 'email' => 'omar.haddad@ofppt.com', 'subject' => 'Base de données', 'groups' => [$g1->id, $g2->id]],
-            ['first_name' => 'Nadia', 'last_name' => 'Fassi', 'email' => 'nadia.fassi@ofppt.com', 'subject' => 'Réseaux', 'groups' => [$g2->id]],
-            ['first_name' => 'Yassine', 'last_name' => 'Amrani', 'email' => 'yassine.amrani@ofppt.com', 'subject' => 'PHP / Laravel', 'groups' => [$g2->id]],
+            ['first_name' => 'Nadia', 'last_name' => 'Fassi', 'email' => 'nadia.fassi@ofppt.com', 'subject' => 'Réseaux', 'groups' => [$g1->id, $g2->id]],
+            ['first_name' => 'Yassine', 'last_name' => 'Amrani', 'email' => 'yassine.amrani@ofppt.com', 'subject' => 'PHP / Laravel', 'groups' => [$g1->id, $g2->id]],
         ];
 
         foreach ($teachers as $t) {
