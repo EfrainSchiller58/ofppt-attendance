@@ -83,6 +83,8 @@ class DashboardController extends Controller
     /** GET /api/dashboard/chart — monthly attendance/absence data */
     public function chart()
     {
+        $driver = DB::getDriverName();
+
         // Get absences grouped by month for the current academic year
         $currentYear = (int) date('Y');
         $currentMonth = (int) date('m');
@@ -100,41 +102,60 @@ class DashboardController extends Controller
 
         $totalStudents = max(Student::count(), 1);
 
-        // Get monthly absence hours via one query (PostgreSQL compatible)
-        $rows = Absence::select(
-                DB::raw('EXTRACT(YEAR FROM date)::int as y'),
-                DB::raw('EXTRACT(MONTH FROM date)::int as m'),
-                DB::raw('SUM(hours) as total_hours'),
-                DB::raw('COUNT(DISTINCT student_id) as absent_students')
-            )
-            ->where(function ($q) use ($startYear) {
-                $q->where(function ($q2) use ($startYear) {
-                    $q2->whereRaw('EXTRACT(YEAR FROM date) = ?', [$startYear])
-                       ->whereRaw('EXTRACT(MONTH FROM date) >= 9');
-                })->orWhere(function ($q2) use ($startYear) {
-                    $q2->whereRaw('EXTRACT(YEAR FROM date) = ?', [$startYear + 1])
-                       ->whereRaw('EXTRACT(MONTH FROM date) <= 6');
-                });
-            })
-            ->groupBy(DB::raw('EXTRACT(YEAR FROM date)'), DB::raw('EXTRACT(MONTH FROM date)'))
-            ->get()
-            ->keyBy(fn ($r) => $r->y . '-' . $r->m);
+        // Get monthly absence hours — compatible with MySQL and PostgreSQL
+        if ($driver === 'pgsql') {
+            $rows = Absence::select(
+                    DB::raw('EXTRACT(YEAR FROM date)::int as y'),
+                    DB::raw('EXTRACT(MONTH FROM date)::int as m'),
+                    DB::raw('COALESCE(SUM(hours), 0) as total_hours'),
+                    DB::raw('COUNT(*) as absence_count')
+                )
+                ->where(function ($q) use ($startYear) {
+                    $q->where(function ($q2) use ($startYear) {
+                        $q2->whereRaw('EXTRACT(YEAR FROM date) = ?', [$startYear])
+                           ->whereRaw('EXTRACT(MONTH FROM date) >= 9');
+                    })->orWhere(function ($q2) use ($startYear) {
+                        $q2->whereRaw('EXTRACT(YEAR FROM date) = ?', [$startYear + 1])
+                           ->whereRaw('EXTRACT(MONTH FROM date) <= 6');
+                    });
+                })
+                ->groupBy(DB::raw('EXTRACT(YEAR FROM date)'), DB::raw('EXTRACT(MONTH FROM date)'))
+                ->get()
+                ->keyBy(fn ($r) => $r->y . '-' . $r->m);
+        } else {
+            // MySQL / SQLite
+            $rows = Absence::select(
+                    DB::raw('YEAR(date) as y'),
+                    DB::raw('MONTH(date) as m'),
+                    DB::raw('COALESCE(SUM(hours), 0) as total_hours'),
+                    DB::raw('COUNT(*) as absence_count')
+                )
+                ->where(function ($q) use ($startYear) {
+                    $q->where(function ($q2) use ($startYear) {
+                        $q2->whereYear('date', $startYear)
+                           ->whereRaw('MONTH(date) >= 9');
+                    })->orWhere(function ($q2) use ($startYear) {
+                        $q2->whereYear('date', $startYear + 1)
+                           ->whereRaw('MONTH(date) <= 6');
+                    });
+                })
+                ->groupBy(DB::raw('YEAR(date)'), DB::raw('MONTH(date)'))
+                ->get()
+                ->keyBy(fn ($r) => $r->y . '-' . $r->m);
+        }
 
         $data = [];
         foreach ($months as $dt) {
             $key = $dt->year . '-' . $dt->month;
             $row = $rows->get($key);
             $absenceHours = $row ? (float) $row->total_hours : 0;
-
-            // Approximate: assume 160h possible per student per month (40h/week × 4)
-            $totalPossible = $totalStudents * 160;
-            $absencePct = $totalPossible > 0 ? round(($absenceHours / $totalPossible) * 100, 1) : 0;
-            $attendancePct = round(100 - $absencePct, 1);
+            $absenceCount = $row ? (int) $row->absence_count : 0;
 
             $data[] = [
                 'month'      => $dt->format('M'),
-                'attendance' => $attendancePct,
-                'absences'   => $absencePct,
+                'attendance' => round(max(0, ($totalStudents * 20) - $absenceHours), 1), // approximate present hours (20 working days × 1h avg)
+                'absences'   => round($absenceHours, 1),
+                'count'      => $absenceCount,
             ];
         }
 
@@ -144,20 +165,34 @@ class DashboardController extends Controller
     /** GET /api/dashboard/heatmap — weekly absence heatmap (4 weeks × 5 days) */
     public function heatmap()
     {
+        $driver = DB::getDriverName();
         $today = Carbon::today();
         // Go back 4 full weeks from today (Mon–Fri)
         $startOfCurrentWeek = $today->copy()->startOfWeek(Carbon::MONDAY);
         $start = $startOfCurrentWeek->copy()->subWeeks(3);
 
-        $rows = Absence::select(
-                DB::raw('date::text as date_str'),
-                DB::raw('SUM(hours) as total_hours')
-            )
-            ->where('date', '>=', $start->toDateString())
-            ->where('date', '<=', $today->toDateString())
-            ->groupBy('date')
-            ->get()
-            ->keyBy('date_str');
+        if ($driver === 'pgsql') {
+            $rows = Absence::select(
+                    DB::raw('date::text as date_str'),
+                    DB::raw('COALESCE(SUM(hours), 0) as total_hours')
+                )
+                ->where('date', '>=', $start->toDateString())
+                ->where('date', '<=', $today->toDateString())
+                ->groupBy('date')
+                ->get()
+                ->keyBy('date_str');
+        } else {
+            // MySQL / SQLite
+            $rows = Absence::select(
+                    DB::raw('DATE(date) as date_str'),
+                    DB::raw('COALESCE(SUM(hours), 0) as total_hours')
+                )
+                ->where('date', '>=', $start->toDateString())
+                ->where('date', '<=', $today->toDateString())
+                ->groupBy(DB::raw('DATE(date)'))
+                ->get()
+                ->keyBy('date_str');
+        }
 
         $weeks = [];
         for ($w = 0; $w < 4; $w++) {
