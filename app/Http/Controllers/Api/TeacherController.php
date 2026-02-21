@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TeacherResource;
+use App\Mail\WelcomeMail;
 use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class TeacherController extends Controller
 {
@@ -57,6 +59,14 @@ class TeacherController extends Controller
             ]);
 
             $teacher->load(['user', 'groups']);
+
+            // Send welcome email
+            try {
+                Mail::to($user->email)->send(new WelcomeMail($user, $defaultPassword));
+            } catch (\Throwable $e) {
+                \Log::warning('Failed to send welcome email: ' . $e->getMessage());
+            }
+
             return response()->json([
                 'data' => new TeacherResource($teacher),
                 'credentials' => [

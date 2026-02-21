@@ -30,7 +30,7 @@ class AbsenceMarkedMail extends Mailable
         $teacher = $this->absence->teacher->user;
 
         return new Content(
-            markdown: 'emails.absence-marked',
+            view: 'emails.absence-marked',
             with: [
                 'studentName' => $student->first_name . ' ' . $student->last_name,
                 'teacherName' => $teacher->first_name . ' ' . $teacher->last_name,

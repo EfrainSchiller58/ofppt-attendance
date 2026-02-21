@@ -23,38 +23,26 @@
                         </td>
                     </tr>
 
-                    <!-- Status Banner -->
+                    <!-- Banner -->
                     <tr>
                         <td style="padding:0 40px;">
-                            @if($decision === 'approved')
-                            <div style="background:linear-gradient(135deg,#d1fae5,#a7f3d0);border-left:4px solid #10b981;border-radius:0 8px 8px 0;padding:16px 20px;margin-top:28px;">
+                            <div style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);border-left:4px solid #3b82f6;border-radius:0 8px 8px 0;padding:16px 20px;margin-top:28px;">
                                 <table cellpadding="0" cellspacing="0" width="100%"><tr>
-                                    <td width="36" style="vertical-align:top;"><span style="font-size:22px;">✅</span></td>
+                                    <td width="36" style="vertical-align:top;"><span style="font-size:22px;">📨</span></td>
                                     <td>
-                                        <p style="color:#065f46;font-size:14px;font-weight:700;margin:0;">Justification Approuvée</p>
-                                        <p style="color:#047857;font-size:13px;margin:4px 0 0;">Votre demande a été acceptée par l'administration</p>
+                                        <p style="color:#1e3a8a;font-size:14px;font-weight:700;margin:0;">Nouvelle Justification Soumise</p>
+                                        <p style="color:#1d4ed8;font-size:13px;margin:4px 0 0;">Un stagiaire a soumis une demande de justification</p>
                                     </td>
                                 </tr></table>
                             </div>
-                            @else
-                            <div style="background:linear-gradient(135deg,#fee2e2,#fecaca);border-left:4px solid #ef4444;border-radius:0 8px 8px 0;padding:16px 20px;margin-top:28px;">
-                                <table cellpadding="0" cellspacing="0" width="100%"><tr>
-                                    <td width="36" style="vertical-align:top;"><span style="font-size:22px;">❌</span></td>
-                                    <td>
-                                        <p style="color:#991b1b;font-size:14px;font-weight:700;margin:0;">Justification Rejetée</p>
-                                        <p style="color:#b91c1c;font-size:13px;margin:4px 0 0;">Votre demande n'a pas été acceptée</p>
-                                    </td>
-                                </tr></table>
-                            </div>
-                            @endif
                         </td>
                     </tr>
 
                     <!-- Body -->
                     <tr>
                         <td style="padding:24px 40px 0;">
-                            <p style="color:#1e293b;font-size:15px;line-height:1.6;margin:0;">Bonjour <strong style="color:#1e3a5f;">{{ $studentName }}</strong>,</p>
-                            <p style="color:#475569;font-size:14px;line-height:1.6;margin:12px 0 0;">Votre demande de justification a été examinée. Voici les détails :</p>
+                            <p style="color:#1e293b;font-size:15px;line-height:1.6;margin:0;">Bonjour,</p>
+                            <p style="color:#475569;font-size:14px;line-height:1.6;margin:12px 0 0;">Le stagiaire <strong style="color:#1e3a5f;">{{ $studentName }}</strong> du groupe <strong>{{ $groupName }}</strong> a soumis une justification pour examen :</p>
                         </td>
                     </tr>
 
@@ -62,6 +50,17 @@
                     <tr>
                         <td style="padding:20px 40px;">
                             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+                                <tr>
+                                    <td style="padding:16px 20px;border-bottom:1px solid #e2e8f0;">
+                                        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                                            <td width="32"><span style="font-size:18px;">👤</span></td>
+                                            <td>
+                                                <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:0;font-weight:600;">Stagiaire</p>
+                                                <p style="color:#1e293b;font-size:15px;font-weight:600;margin:2px 0 0;">{{ $studentName }}</p>
+                                            </td>
+                                        </tr></table>
+                                    </td>
+                                </tr>
                                 <tr>
                                     <td style="padding:16px 20px;border-bottom:1px solid #e2e8f0;">
                                         <table width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -89,59 +88,40 @@
                                         <table width="100%" cellpadding="0" cellspacing="0"><tr>
                                             <td width="32"><span style="font-size:18px;">📝</span></td>
                                             <td>
-                                                <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:0;font-weight:600;">Motif soumis</p>
+                                                <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:0;font-weight:600;">Motif</p>
                                                 <p style="color:#1e293b;font-size:15px;font-weight:600;margin:2px 0 0;">{{ $reason }}</p>
                                             </td>
                                         </tr></table>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td style="padding:16px 20px;{{ $reviewNote ? 'border-bottom:1px solid #e2e8f0;' : '' }}">
-                                        <table width="100%" cellpadding="0" cellspacing="0"><tr>
-                                            <td width="32"><span style="font-size:18px;">{{ $decision === 'approved' ? '✅' : '❌' }}</span></td>
-                                            <td>
-                                                <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:0;font-weight:600;">Décision</p>
-                                                <p style="color:{{ $decision === 'approved' ? '#059669' : '#dc2626' }};font-size:15px;font-weight:700;margin:2px 0 0;">{{ $decision === 'approved' ? 'Approuvée' : 'Rejetée' }}</p>
-                                            </td>
-                                        </tr></table>
-                                    </td>
-                                </tr>
-                                @if($reviewNote)
-                                <tr>
                                     <td style="padding:16px 20px;">
                                         <table width="100%" cellpadding="0" cellspacing="0"><tr>
-                                            <td width="32"><span style="font-size:18px;">💬</span></td>
+                                            <td width="32"><span style="font-size:18px;">📎</span></td>
                                             <td>
-                                                <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:0;font-weight:600;">Note de l'administration</p>
-                                                <p style="color:#1e293b;font-size:15px;font-weight:600;margin:2px 0 0;font-style:italic;">« {{ $reviewNote }} »</p>
+                                                <p style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:0;font-weight:600;">Pièce Jointe</p>
+                                                <p style="color:#1e293b;font-size:15px;font-weight:600;margin:2px 0 0;">{{ $fileName }}</p>
                                             </td>
                                         </tr></table>
                                     </td>
                                 </tr>
-                                @endif
                             </table>
                         </td>
                     </tr>
 
-                    <!-- Next Steps -->
+                    <!-- Action Needed -->
                     <tr>
                         <td style="padding:0 40px;">
-                            @if($decision === 'approved')
-                            <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:16px 20px;">
-                                <p style="color:#065f46;font-size:13px;margin:0;line-height:1.5;">🎉 <strong>Bonne nouvelle !</strong> Votre absence a été marquée comme justifiée. Aucune action supplémentaire n'est requise.</p>
-                            </div>
-                            @else
                             <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:16px 20px;">
-                                <p style="color:#9a3412;font-size:13px;margin:0;line-height:1.5;">📎 <strong>Que faire ?</strong> Vous pouvez soumettre une nouvelle demande avec des documents complémentaires si nécessaire.</p>
+                                <p style="color:#9a3412;font-size:13px;margin:0;line-height:1.5;">🔔 <strong>Action requise :</strong> Veuillez examiner cette demande et l'approuver ou la rejeter depuis le panneau d'administration.</p>
                             </div>
-                            @endif
                         </td>
                     </tr>
 
                     <!-- CTA Button -->
                     <tr>
                         <td align="center" style="padding:28px 40px;">
-                            <a href="{{ $appUrl }}" style="display:inline-block;background:linear-gradient(135deg,#1e3a5f,#2d5f8a);color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:10px;letter-spacing:0.3px;box-shadow:0 4px 14px rgba(30,58,95,0.3);">📋 Voir mes justifications</a>
+                            <a href="{{ $appUrl }}" style="display:inline-block;background:linear-gradient(135deg,#1e3a5f,#2d5f8a);color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:10px;letter-spacing:0.3px;box-shadow:0 4px 14px rgba(30,58,95,0.3);">⚙️ Gérer les justifications</a>
                         </td>
                     </tr>
 

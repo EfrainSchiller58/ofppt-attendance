@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\JustificationResource;
 use App\Mail\JustificationReviewedMail;
+use App\Mail\JustificationSubmittedMail;
 use App\Models\Justification;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 
@@ -52,7 +54,19 @@ class JustificationController extends Controller
             'file_size'  => $file->getSize(),
         ]);
 
-        $justification->load(['absence.student.user']);
+        $justification->load(['absence.student.user', 'absence.group']);
+
+        // Send email notification to admin
+        try {
+            $admins = User::where('role', 'admin')->get();
+            foreach ($admins as $admin) {
+                Mail::to($admin->email)
+                    ->send(new JustificationSubmittedMail($justification));
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to send justification submitted email: ' . $e->getMessage());
+        }
+
         return new JustificationResource($justification);
     }
 

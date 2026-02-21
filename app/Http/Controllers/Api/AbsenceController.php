@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AbsenceResource;
 use App\Mail\AbsenceMarkedMail;
+use App\Mail\AbsenceThresholdMail;
 use App\Models\Absence;
 use App\Models\Notification;
 use App\Models\User;
@@ -121,6 +122,37 @@ class AbsenceController extends Controller
                     ->send(new AbsenceMarkedMail($absence));
             } catch (\Throwable $e) {
                 \Log::warning('Failed to send absence email: ' . $e->getMessage());
+            }
+
+            // Check absence threshold (3+ absences triggers alert)
+            try {
+                $student = $absence->student;
+                $totalAbsences = Absence::where('student_id', $student->id)->count();
+
+                if ($totalAbsences >= 3 && ($totalAbsences === 3 || $totalAbsences % 5 === 0)) {
+                    $totalHours = Absence::where('student_id', $student->id)->sum('hours');
+                    $unjustifiedCount = Absence::where('student_id', $student->id)
+                        ->where('status', '!=', 'justified')
+                        ->count();
+
+                    // Alert the student
+                    Mail::to($student->user->email)
+                        ->send(new AbsenceThresholdMail(
+                            $student, $totalAbsences, $totalHours, $unjustifiedCount,
+                            'student', $student->user->first_name . ' ' . $student->user->last_name
+                        ));
+
+                    // Alert admins
+                    foreach ($adminUsers as $admin) {
+                        Mail::to($admin->email)
+                            ->send(new AbsenceThresholdMail(
+                                $student, $totalAbsences, $totalHours, $unjustifiedCount,
+                                'admin', $admin->first_name . ' ' . $admin->last_name
+                            ));
+                    }
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Failed to send threshold alert: ' . $e->getMessage());
             }
         }
 

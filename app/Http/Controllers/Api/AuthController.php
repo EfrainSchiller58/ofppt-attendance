@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
+use App\Mail\PasswordChangedMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -101,6 +103,14 @@ class AuthController extends Controller
             'password' => Hash::make($data['new_password']),
             'must_change_password' => false,
         ]);
+
+        // Send password changed confirmation email
+        try {
+            Mail::to($user->email)
+                ->send(new PasswordChangedMail($user, $request->ip()));
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to send password changed email: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'Password updated successfully.',
