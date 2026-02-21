@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AbsenceResource;
+use App\Mail\AbsenceMarkedMail;
 use App\Models\Absence;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class AbsenceController extends Controller
 {
@@ -112,6 +114,14 @@ class AbsenceController extends Controller
                 'message' => $teacherName . ' marked you absent for ' . $absence->subject . ' on ' . $absence->date . '.',
                 'type' => 'error',
             ]);
+
+            // Send email notification to student
+            try {
+                Mail::to($absence->student->user->email)
+                    ->send(new AbsenceMarkedMail($absence));
+            } catch (\Throwable $e) {
+                \Log::warning('Failed to send absence email: ' . $e->getMessage());
+            }
         }
 
         return AbsenceResource::collection($absences);

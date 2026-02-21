@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\JustificationResource;
+use App\Mail\JustificationReviewedMail;
 use App\Models\Justification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class JustificationController extends Controller
 {
@@ -67,6 +69,14 @@ class JustificationController extends Controller
         // Also update the absence status
         $justification->absence->update(['status' => 'justified']);
 
+        // Send email to student
+        try {
+            Mail::to($justification->absence->student->user->email)
+                ->send(new JustificationReviewedMail($justification, 'approved'));
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to send justification email: ' . $e->getMessage());
+        }
+
         $justification->load(['absence.student.user']);
         return new JustificationResource($justification);
     }
@@ -82,6 +92,14 @@ class JustificationController extends Controller
         ]);
 
         $justification->absence->update(['status' => 'unjustified']);
+
+        // Send email to student
+        try {
+            Mail::to($justification->absence->student->user->email)
+                ->send(new JustificationReviewedMail($justification, 'rejected'));
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to send justification email: ' . $e->getMessage());
+        }
 
         $justification->load(['absence.student.user']);
         return new JustificationResource($justification);
