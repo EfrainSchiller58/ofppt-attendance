@@ -100,21 +100,23 @@ class DashboardController extends Controller
 
         $totalStudents = max(Student::count(), 1);
 
-        // Get monthly absence hours via one query
+        // Get monthly absence hours via one query (PostgreSQL compatible)
         $rows = Absence::select(
-                DB::raw('YEAR(date) as y'),
-                DB::raw('MONTH(date) as m'),
+                DB::raw('EXTRACT(YEAR FROM date)::int as y'),
+                DB::raw('EXTRACT(MONTH FROM date)::int as m'),
                 DB::raw('SUM(hours) as total_hours'),
                 DB::raw('COUNT(DISTINCT student_id) as absent_students')
             )
             ->where(function ($q) use ($startYear) {
                 $q->where(function ($q2) use ($startYear) {
-                    $q2->whereYear('date', $startYear)->whereMonth('date', '>=', 9);
+                    $q2->whereRaw('EXTRACT(YEAR FROM date) = ?', [$startYear])
+                       ->whereRaw('EXTRACT(MONTH FROM date) >= 9');
                 })->orWhere(function ($q2) use ($startYear) {
-                    $q2->whereYear('date', $startYear + 1)->whereMonth('date', '<=', 6);
+                    $q2->whereRaw('EXTRACT(YEAR FROM date) = ?', [$startYear + 1])
+                       ->whereRaw('EXTRACT(MONTH FROM date) <= 6');
                 });
             })
-            ->groupBy(DB::raw('YEAR(date)'), DB::raw('MONTH(date)'))
+            ->groupBy(DB::raw('EXTRACT(YEAR FROM date)'), DB::raw('EXTRACT(MONTH FROM date)'))
             ->get()
             ->keyBy(fn ($r) => $r->y . '-' . $r->m);
 
@@ -148,14 +150,14 @@ class DashboardController extends Controller
         $start = $startOfCurrentWeek->copy()->subWeeks(3);
 
         $rows = Absence::select(
-                DB::raw('date'),
+                DB::raw('date::text as date_str'),
                 DB::raw('SUM(hours) as total_hours')
             )
             ->where('date', '>=', $start->toDateString())
             ->where('date', '<=', $today->toDateString())
             ->groupBy('date')
             ->get()
-            ->keyBy('date');
+            ->keyBy('date_str');
 
         $weeks = [];
         for ($w = 0; $w < 4; $w++) {
@@ -165,7 +167,8 @@ class DashboardController extends Controller
             for ($d = 0; $d < 5; $d++) { // Mon-Fri
                 $dt = $weekStart->copy()->addDays($d);
                 $dateStr = $dt->toDateString();
-                $hours = isset($rows[$dateStr]) ? (float) $rows[$dateStr]->total_hours : 0;
+                $row = $rows->get($dateStr);
+                $hours = $row ? (float) $row->total_hours : 0;
                 $days[] = round($hours, 1);
             }
             $weeks[] = ['week' => $weekLabel, 'days' => $days];

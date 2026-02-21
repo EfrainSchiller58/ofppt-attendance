@@ -16,13 +16,16 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Disable foreign key checks
-        if (DB::getDriverName() === 'sqlite') {
+        $driver = DB::getDriverName();
+        if ($driver === 'sqlite') {
             DB::statement('PRAGMA foreign_keys = OFF');
+        } elseif ($driver === 'pgsql') {
+            DB::statement('SET session_replication_role = replica');
         } else {
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
         }
 
-        // Use delete instead of truncate for SQLite compatibility
+        // Clear all tables
         DB::table('notifications')->delete();
         DB::table('justifications')->delete();
         DB::table('absences')->delete();
@@ -30,11 +33,14 @@ class DatabaseSeeder extends Seeder
         DB::table('students')->delete();
         DB::table('teachers')->delete();
         DB::table('groups')->delete();
-        DB::table('users')->delete();
         DB::table('personal_access_tokens')->delete();
+        DB::table('users')->delete();
 
-        if (DB::getDriverName() === 'sqlite') {
+        // Re-enable foreign key checks
+        if ($driver === 'sqlite') {
             DB::statement('PRAGMA foreign_keys = ON');
+        } elseif ($driver === 'pgsql') {
+            DB::statement('SET session_replication_role = DEFAULT');
         } else {
             DB::statement('SET FOREIGN_KEY_CHECKS=1');
         }
@@ -55,20 +61,19 @@ class DatabaseSeeder extends Seeder
         $g1 = Group::create(['name' => 'DEV201', 'level' => '2ème année']);
         $g2 = Group::create(['name' => 'DEVOFWS', 'level' => '1ère année']);
 
-        // Teachers (4)
+        // Teachers (4) — fixed emails for easy login
         $teachers = [
-            ['first_name' => 'Salma', 'last_name' => 'Karim', 'subject' => 'Développement Web', 'groups' => [$g1->id]],
-            ['first_name' => 'Omar', 'last_name' => 'Haddad', 'subject' => 'Base de données', 'groups' => [$g1->id, $g2->id]],
-            ['first_name' => 'Nadia', 'last_name' => 'Fassi', 'subject' => 'Réseaux', 'groups' => [$g2->id]],
-            ['first_name' => 'Yassine', 'last_name' => 'Amrani', 'subject' => 'PHP / Laravel', 'groups' => [$g2->id]],
+            ['first_name' => 'Salma', 'last_name' => 'Karim', 'email' => 'salma.karim@ofppt.com', 'subject' => 'Développement Web', 'groups' => [$g1->id]],
+            ['first_name' => 'Omar', 'last_name' => 'Haddad', 'email' => 'omar.haddad@ofppt.com', 'subject' => 'Base de données', 'groups' => [$g1->id, $g2->id]],
+            ['first_name' => 'Nadia', 'last_name' => 'Fassi', 'email' => 'nadia.fassi@ofppt.com', 'subject' => 'Réseaux', 'groups' => [$g2->id]],
+            ['first_name' => 'Yassine', 'last_name' => 'Amrani', 'email' => 'yassine.amrani@ofppt.com', 'subject' => 'PHP / Laravel', 'groups' => [$g2->id]],
         ];
 
         foreach ($teachers as $t) {
-            $email = $this->generateSchoolEmail();
             $user = User::create([
                 'first_name' => $t['first_name'],
                 'last_name'  => $t['last_name'],
-                'email'      => $email,
+                'email'      => $t['email'],
                 'password'   => Hash::make($defaultPassword),
                 'role'       => 'teacher',
                 'must_change_password' => true,
@@ -82,16 +87,17 @@ class DatabaseSeeder extends Seeder
             $teacher->groups()->attach($t['groups']);
         }
 
-        // Students (20 per group)
+        // Students (20 per group) — predictable emails
         $firstNames = ['Youssef', 'Fatima', 'Ahmed', 'Sara', 'Khalid', 'Amina', 'Ilyas', 'Meryem', 'Hamza', 'Imane', 'Mehdi', 'Hajar', 'Rachid', 'Asma', 'Ayoub', 'Kawtar', 'Soufiane', 'Chaima', 'Karim', 'Lina'];
         $lastNames = ['Bennani', 'Zahra', 'Tazi', 'El Amrani', 'Fassi', 'Karim', 'El Idrissi', 'Ouali', 'Bouzid', 'Lamrani', 'Alaoui', 'Gharbi', 'Berrada', 'Safi', 'Naciri', 'Daoudi', 'Kabbaj', 'Rahmani', 'El Hammadi', 'Chakir'];
 
         $groups = [$g1, $g2];
         foreach ($groups as $groupIndex => $group) {
+            $groupCode = $groupIndex === 0 ? 'dev201' : 'devofws';
             for ($i = 1; $i <= 20; $i++) {
                 $firstName = $firstNames[($i - 1) % count($firstNames)];
                 $lastName = $lastNames[($i - 1 + $groupIndex) % count($lastNames)];
-                $email = $this->generateSchoolEmail();
+                $email = strtolower(str_replace(' ', '', $firstName)) . '.' . $groupCode . $i . '@ofppt.com';
                 $cne = sprintf('F%s%03d', $groupIndex + 1, $i);
 
                 $user = User::create([
@@ -110,15 +116,5 @@ class DatabaseSeeder extends Seeder
                 ]);
             }
         }
-    }
-
-    private function generateSchoolEmail(): string
-    {
-        do {
-            $code = 'f' . random_int(10000, 99999);
-            $email = $code . '@ofppt.com';
-        } while (User::where('email', $email)->exists());
-
-        return $email;
     }
 }
