@@ -12,9 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('phone', 20)->nullable()->after('email');
-            $table->string('profile_image', 500)->nullable()->after('phone');
-            $table->boolean('must_change_password')->default(true)->after('is_active');
+            $table->string('phone', 20)->nullable();
+            $table->string('profile_image', 500)->nullable();
+            $table->boolean('must_change_password')->default(true);
             $table->index('must_change_password');
         });
     }

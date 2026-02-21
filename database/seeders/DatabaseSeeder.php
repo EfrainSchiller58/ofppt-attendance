@@ -15,22 +15,23 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Disable foreign key checks (works for both MySQL and SQLite)
+        // Disable foreign key checks
         if (DB::getDriverName() === 'sqlite') {
             DB::statement('PRAGMA foreign_keys = OFF');
         } else {
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
         }
 
-        Notification::truncate();
-        DB::table('justifications')->truncate();
-        DB::table('absences')->truncate();
-        DB::table('teacher_groups')->truncate();
-        Student::truncate();
-        Teacher::truncate();
-        Group::truncate();
-        User::truncate();
-        DB::table('personal_access_tokens')->truncate();
+        // Use delete instead of truncate for SQLite compatibility
+        DB::table('notifications')->delete();
+        DB::table('justifications')->delete();
+        DB::table('absences')->delete();
+        DB::table('teacher_groups')->delete();
+        DB::table('students')->delete();
+        DB::table('teachers')->delete();
+        DB::table('groups')->delete();
+        DB::table('users')->delete();
+        DB::table('personal_access_tokens')->delete();
 
         if (DB::getDriverName() === 'sqlite') {
             DB::statement('PRAGMA foreign_keys = ON');

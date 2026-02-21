@@ -19,9 +19,7 @@ return new class extends Migration
             $table->date('date');
             $table->time('start_time');
             $table->time('end_time');
-            $table->decimal('hours', 4, 2)->storedAs(
-                "TIMESTAMPDIFF(MINUTE, CONCAT(date, ' ', start_time), CONCAT(date, ' ', end_time)) / 60"
-            );
+            $table->decimal('hours', 4, 2)->nullable();
             $table->string('subject', 100);
             $table->text('notes')->nullable();
             $table->enum('status', ['pending', 'justified', 'unjustified'])->default('pending');
