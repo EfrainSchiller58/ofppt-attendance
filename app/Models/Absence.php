@@ -8,9 +8,20 @@ class Absence extends Model
 {
     protected $fillable = [
         'student_id', 'teacher_id', 'group_id',
-        'date', 'start_time', 'end_time',
+        'date', 'start_time', 'end_time', 'hours',
         'subject', 'notes', 'status',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Absence $absence) {
+            if (empty($absence->hours) && $absence->start_time && $absence->end_time) {
+                $start = strtotime($absence->start_time);
+                $end = strtotime($absence->end_time);
+                $absence->hours = round(($end - $start) / 3600, 2);
+            }
+        });
+    }
 
     public function student()
     {
