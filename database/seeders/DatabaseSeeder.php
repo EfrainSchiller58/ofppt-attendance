@@ -100,6 +100,11 @@ class DatabaseSeeder extends Seeder
                 $email = strtolower(str_replace(' ', '', $firstName)) . '.' . $groupCode . $i . '@ofppt.com';
                 $cne = sprintf('F%s%03d', $groupIndex + 1, $i);
 
+                // Sara Fassi (DEVOFWS group, student #4) uses real email for testing
+                if ($groupCode === 'devofws' && $i === 4) {
+                    $email = 'elmehdisekrare@gmail.com';
+                }
+
                 $user = User::create([
                     'first_name' => $firstName,
                     'last_name'  => $lastName,
