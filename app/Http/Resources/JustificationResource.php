@@ -16,6 +16,7 @@ class JustificationResource extends JsonResource
             'hours'        => (float) $this->absence->hours,
             'reason'       => $this->reason,
             'file_name'    => $this->file_name,
+            'file_path'    => $this->file_path ? asset('storage/' . $this->file_path) : null,
             'file_type'    => $this->file_type,
             'submitted_at' => $this->submitted_at?->toISOString(),
             'status'       => $this->status,
