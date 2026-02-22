@@ -66,7 +66,7 @@ class AuthController extends Controller
         $data = $request->validate([
             'first_name' => 'sometimes|string|max:100',
             'last_name' => 'sometimes|string|max:100',
-            'email' => 'sometimes|email|regex:/^[^@\s]+@ofppt\.com$/i|unique:users,email,' . $user->id,
+            'email' => 'sometimes|email|unique:users,email,' . $user->id,
             'phone' => 'nullable|string|max:20',
             'profile_image' => 'nullable|image|max:2048',
         ]);
