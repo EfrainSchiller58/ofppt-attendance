@@ -13,6 +13,31 @@ use Illuminate\Support\Facades\Route;
 // Public
 Route::post('/login', [AuthController::class, 'login']);
 
+// Email diagnostics (temporary)
+Route::get('/test-email', function () {
+    $config = [
+        'mailer'   => config('mail.default'),
+        'from'     => config('mail.from'),
+        'resend_key_set' => !empty(config('services.resend.key')),
+        'resend_key_prefix' => substr(config('services.resend.key', ''), 0, 8) . '...',
+    ];
+
+    try {
+        \Illuminate\Support\Facades\Mail::raw('Test email from Railway - ' . now()->toIso8601String(), function ($message) {
+            $message->to('elmehdisekrare@gmail.com')
+                    ->subject('OFPPT Railway Email Test - ' . now()->format('H:i:s'));
+        });
+        return response()->json(['status' => 'sent', 'config' => $config]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'FAILED',
+            'error'  => $e->getMessage(),
+            'trace'  => array_slice(explode("\n", $e->getTraceAsString()), 0, 5),
+            'config' => $config,
+        ], 500);
+    }
+});
+
 // Authenticated
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);

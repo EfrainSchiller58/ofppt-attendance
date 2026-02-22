@@ -13,7 +13,7 @@ APP_DEBUG="${APP_DEBUG:-false}"
 APP_URL="${APP_URL:-http://localhost}"
 
 LOG_CHANNEL=stack
-LOG_LEVEL="${LOG_LEVEL:-error}"
+LOG_LEVEL="${LOG_LEVEL:-debug}"
 
 DB_CONNECTION="${DB_CONNECTION:-sqlite}"
 DB_HOST="${DB_HOST:-}"
