@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
+use App\Mail\EmailChangedMail;
 use App\Mail\PasswordChangedMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -62,6 +64,7 @@ class AuthController extends Controller
     public function updateProfile(Request $request)
     {
         $user = $request->user();
+        $oldEmail = $user->email;
 
         $data = $request->validate([
             'first_name' => 'sometimes|string|max:100',
@@ -80,8 +83,26 @@ class AuthController extends Controller
         }
 
         $user->update($data);
+        $user->refresh();
 
-        return new UserResource($user->fresh());
+        // Send email notification if email was changed
+        if (isset($data['email']) && $data['email'] !== $oldEmail) {
+            try {
+                // Send to the NEW email address
+                Mail::to($user->email)
+                    ->send(new EmailChangedMail($user, $oldEmail, $user->email, $request->ip()));
+                Log::info('Email changed notification sent to new address: ' . $user->email);
+
+                // Also try to send to the OLD email address (security alert)
+                Mail::to($oldEmail)
+                    ->send(new EmailChangedMail($user, $oldEmail, $user->email, $request->ip()));
+                Log::info('Email changed notification sent to old address: ' . $oldEmail);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to send email changed notification: ' . $e->getMessage());
+            }
+        }
+
+        return new UserResource($user);
     }
 
     /** PATCH /api/me/change-password */
@@ -106,10 +127,12 @@ class AuthController extends Controller
 
         // Send password changed confirmation email
         try {
+            Log::info('Sending password changed email to: ' . $user->email . ' (must_change_password was: ' . ($user->must_change_password ? 'true' : 'false') . ')');
             Mail::to($user->email)
                 ->send(new PasswordChangedMail($user, $request->ip()));
+            Log::info('Password changed email sent successfully to: ' . $user->email);
         } catch (\Throwable $e) {
-            \Log::warning('Failed to send password changed email: ' . $e->getMessage());
+            Log::error('Failed to send password changed email to ' . $user->email . ': ' . $e->getMessage());
         }
 
         return response()->json([
