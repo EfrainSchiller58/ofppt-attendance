@@ -13,6 +13,16 @@ use Illuminate\Support\Facades\Route;
 // Public
 Route::post('/login', [AuthController::class, 'login']);
 
+// Temporary: check mail config
+Route::get('/mail-check', function () {
+    return response()->json([
+        'mailer' => config('mail.default'),
+        'from_address' => config('mail.from.address'),
+        'from_name' => config('mail.from.name'),
+        'resend_key_exists' => !empty(config('services.resend.key')),
+    ]);
+});
+
 // Authenticated
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
