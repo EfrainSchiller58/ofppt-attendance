@@ -22,20 +22,60 @@ Route::get('/test-email', function () {
         'resend_key_prefix' => substr(config('services.resend.key', ''), 0, 8) . '...',
     ];
 
+    $results = [];
+
+    // Test 1: Raw text email (no Blade view)
     try {
-        \Illuminate\Support\Facades\Mail::raw('Test email from Railway - ' . now()->toIso8601String(), function ($message) {
+        \Illuminate\Support\Facades\Mail::raw('Raw test from Railway - ' . now()->toIso8601String(), function ($message) {
             $message->to('elmehdisekrare@gmail.com')
-                    ->subject('OFPPT Railway Email Test - ' . now()->format('H:i:s'));
+                    ->subject('Test 1 Raw - ' . now()->format('H:i:s'));
         });
-        return response()->json(['status' => 'sent', 'config' => $config]);
+        $results['raw_email'] = 'OK';
     } catch (\Throwable $e) {
-        return response()->json([
-            'status' => 'FAILED',
-            'error'  => $e->getMessage(),
-            'trace'  => array_slice(explode("\n", $e->getTraceAsString()), 0, 5),
-            'config' => $config,
-        ], 500);
+        $results['raw_email'] = 'FAILED: ' . $e->getMessage();
     }
+
+    // Test 2: Mailable with Blade view (PasswordChangedMail)
+    try {
+        $user = \App\Models\User::where('email', 'elmehdisekrare@gmail.com')->first();
+        if (!$user) {
+            $user = \App\Models\User::first();
+        }
+        $results['test_user'] = $user ? $user->email : 'NO USER FOUND';
+
+        if ($user) {
+            \Illuminate\Support\Facades\Mail::to('elmehdisekrare@gmail.com')
+                ->send(new \App\Mail\PasswordChangedMail($user, '127.0.0.1'));
+            $results['mailable_email'] = 'OK';
+        }
+    } catch (\Throwable $e) {
+        $results['mailable_email'] = 'FAILED: ' . $e->getMessage();
+        $results['mailable_trace'] = array_slice(explode("\n", $e->getTraceAsString()), 0, 8);
+    }
+
+    // Test 3: Check if views exist
+    try {
+        $viewExists = view()->exists('emails.password-changed');
+        $results['view_exists'] = $viewExists ? 'YES' : 'NO';
+    } catch (\Throwable $e) {
+        $results['view_exists'] = 'ERROR: ' . $e->getMessage();
+    }
+
+    // Test 4: Try rendering the view standalone
+    try {
+        $html = view('emails.password-changed', [
+            'userName' => 'Test User',
+            'email' => 'test@test.com',
+            'changedAt' => now()->format('d/m/Y à H:i'),
+            'ipAddress' => '127.0.0.1',
+            'appUrl' => 'https://ofppt-futurelearn.vercel.app',
+        ])->render();
+        $results['view_render'] = 'OK (' . strlen($html) . ' chars)';
+    } catch (\Throwable $e) {
+        $results['view_render'] = 'FAILED: ' . $e->getMessage();
+    }
+
+    return response()->json(['config' => $config, 'results' => $results]);
 });
 
 // Authenticated
