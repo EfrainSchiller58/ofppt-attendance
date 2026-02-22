@@ -118,12 +118,10 @@ class AbsenceController extends Controller
 
             // Send email notification to student
             try {
-                \Log::info('Sending absence email to: ' . $absence->student->user->email);
                 Mail::to($absence->student->user->email)
                     ->send(new AbsenceMarkedMail($absence));
-                \Log::info('Absence email sent OK to: ' . $absence->student->user->email);
             } catch (\Throwable $e) {
-                \Log::error('ABSENCE EMAIL FAILED to ' . $absence->student->user->email . ': ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+                \Log::error('Absence email failed to ' . $absence->student->user->email . ': ' . $e->getMessage());
             }
 
             // Check absence threshold (3+ absences triggers alert)

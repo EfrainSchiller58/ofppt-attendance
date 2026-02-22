@@ -126,26 +126,16 @@ class AuthController extends Controller
         ]);
 
         // Send password changed confirmation email
-        $emailStatus = 'not_attempted';
-        $emailError = null;
         try {
-            Log::info('Sending password changed email to: ' . $user->email);
             Mail::to($user->email)
                 ->send(new PasswordChangedMail($user, $request->ip()));
-            $emailStatus = 'sent';
-            Log::info('Password changed email sent successfully to: ' . $user->email);
         } catch (\Throwable $e) {
-            $emailStatus = 'failed';
-            $emailError = $e->getMessage();
             Log::error('Failed to send password changed email to ' . $user->email . ': ' . $e->getMessage());
         }
 
         return response()->json([
             'message' => 'Password updated successfully.',
             'user' => new UserResource($user->fresh()),
-            'email_status' => $emailStatus,
-            'email_error' => $emailError,
-            'email_to' => $user->email,
         ]);
     }
 }
